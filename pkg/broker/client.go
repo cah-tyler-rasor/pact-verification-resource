@@ -4,6 +4,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"github.com/cah-tylerrasor/pact-verification-resource/pkg/concourse"
 	"io/ioutil"
 	"net/http"
 	"time"
@@ -58,81 +59,38 @@ func (c *Client) get(url string) (resp *http.Response, err error) {
 	return c.client.Do(req)
 }
 
-func (c *Client) GetVersions(provider, consumer string) ([]PactVersion, error) {
-	url := fmt.Sprintf("%s/pacts/provider/%s/consumer/%s/versions", c.baseURL, provider, consumer)
+func (c *Client) GetValidation(consumer, provider string) HalPactVerification {
+	url := fmt.Sprintf("%s/pacts/provider/%s/consumer/%s/verification-results/latest", c.baseURL, provider, consumer)
+	return c.GetValidationFromUrl(consumer, provider, url)
+}
 
+func (c *Client) GetTaggedValidation(consumer, provider, tag string) HalPactVerification {
+	url := fmt.Sprintf("%s/pacts/provider/%s/consumer/%s/latest/%s/verification-results/latest", c.baseURL, provider, consumer, tag)
+	return c.GetValidationFromUrl(consumer, provider, url)
+}
+
+func (c *Client) GetValidationFromUrl(consumer, provider, url string) HalPactVerification {
 	resp, err := c.get(url)
 	if err != nil {
-		return nil, err
+		concourse.FailTask("error while requesting information: %s\n", err)
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode > 399 {
-		return nil, fmt.Errorf("error while requesting information: %d", resp.StatusCode)
+		concourse.FailTask("error while requesting information: %d\n", resp.StatusCode)
 	}
 
-	var halPacts halPact
-	err = json.NewDecoder(resp.Body).Decode(&halPacts)
+	var halPactVerification HalPactVerification
+	err = json.NewDecoder(resp.Body).Decode(&halPactVerification)
 	if err != nil {
-		return nil, err
+		concourse.FailTask("error decoding json: %s\n", err)
 	}
 
-	return halPacts.ToVersions(), nil
+	return halPactVerification
 }
 
-func (c *Client) GetTaggedVersions(provider, consumer, tag string) ([]PactVersion, error) {
-	url := fmt.Sprintf("%s/pacts/provider/%s/consumer/%s/tag/%s", c.baseURL, provider, consumer, tag)
-
-	resp, err := c.get(url)
-	if err != nil {
-		return nil, err
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode > 399 {
-		return nil, fmt.Errorf("error while requesting information: %d", resp.StatusCode)
-	}
-
-	var halPacts halPact
-	err = json.NewDecoder(resp.Body).Decode(&halPacts)
-	if err != nil {
-		return nil, err
-	}
-
-	return halPacts.ToVersions(), nil
-}
-
-func (c *Client) GetDetails(provider, consumer, version string) (Pact, error) {
-	url := fmt.Sprintf("%s/pacts/provider/%s/consumer/%s/version/%s", c.baseURL, provider, consumer, version)
-
-	resp, err := c.get(url)
-	if err != nil {
-		return Pact{}, err
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode > 399 {
-		return Pact{}, fmt.Errorf("error while requesting information: %d", resp.StatusCode)
-	}
-
-	var pact pactDetails
-	err = json.NewDecoder(resp.Body).Decode(&pact)
-	if err != nil {
-		return Pact{}, err
-	}
-
-	return Pact{
-		PactVersion: PactVersion{
-			Provider:        provider,
-			Consumer:        consumer,
-			ConsumerVersion: version,
-		},
-		UpdatedAt: pact.CreatedAt,
-	}, nil
-}
-
-func (c *Client) GetDetailsRaw(provider, consumer, version string) ([]byte, error) {
-	url := fmt.Sprintf("%s/pacts/provider/%s/consumer/%s/version/%s", c.baseURL, provider, consumer, version)
+func (c *Client) GetValidationRaw(consumer, provider, version string) ([]byte, error) {
+	url := fmt.Sprintf("%s/pacts/provider/%s/consumer/%s/pact-version/%s/verification-results/latest", c.baseURL, provider, consumer, version)
 
 	resp, err := c.get(url)
 	if err != nil {

@@ -7,16 +7,17 @@ import (
 type (
 	// Version holds information about a Concourse resource version
 	Version struct {
-		Consumer  string    `json:"consumer"`
-		UpdatedAt time.Time `json:"updated_at"`
-		Version   string    `json:"version"`
+		Provider  string       `json:"provider"`
+		ProviderVersion string `json:"providerVersion"`
+		UpdatedAt time.Time    `json:"updated_at"`
+		PactVersion   string       `json:"pactVersion"`
 	}
 
 	// Source is the configuration of the resource
 	Source struct {
 		BrokerURL string   `json:"broker_url"`
-		Provider  string   `json:"provider"`
-		Consumers []string `json:"consumers"`
+		Consumer  string   `json:"consumer"`
+		Providers []string `json:"providers"`
 		Tag       *string  `json:"tag"`
 		Username  *string  `json:"username"`
 		Password  *string  `json:"password"`

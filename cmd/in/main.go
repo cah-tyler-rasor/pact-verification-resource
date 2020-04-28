@@ -3,12 +3,11 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/cah-tylerrasor/pact-verification-resource/pkg/broker"
+	"github.com/cah-tylerrasor/pact-verification-resource/pkg/concourse"
 	"os"
 	"path/filepath"
 	"strings"
-
-	"github.com/nenad/pact-resource/pkg/broker"
-	"github.com/nenad/pact-resource/pkg/concourse"
 )
 
 func main() {
@@ -27,12 +26,12 @@ func main() {
 
 	dir := os.Args[1]
 
-	bytes, err := client.GetDetailsRaw(request.Source.Provider, request.Version.Consumer, request.Version.Version)
+	bytes, err := client.GetValidationRaw(request.Source.Consumer, request.Version.Provider, request.Version.PactVersion)
 	if err != nil {
 		concourse.FailTask("could not read bytes: %s", err)
 	}
 
-	pactPath := fmt.Sprintf("%s-%s-%s.json", request.Source.Provider, request.Version.Consumer, request.Version.Version)
+	pactPath := fmt.Sprintf("%s-%s-%s.json",  request.Source.Consumer, request.Version.Provider, request.Version.PactVersion)
 	pactPath = strings.ReplaceAll(pactPath, " ", "-")
 
 	file, err := os.Create(filepath.Join(dir, pactPath))
@@ -46,7 +45,7 @@ func main() {
 		concourse.FailTask("could not write to file: %s", err)
 	}
 
-	resp := concourse.InResponse{Version: request.Version, Metadata: concourse.Metadata{{Name: "pact", Value: pactPath}}}
+	resp := concourse.InResponse{Version: request.Version, Metadata: concourse.Metadata{{Name: "pactVerification", Value: pactPath}}}
 	if err := json.NewEncoder(os.Stdout).Encode(resp); err != nil {
 		concourse.FailTask("could not encode response: %s", err)
 	}

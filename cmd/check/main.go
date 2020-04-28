@@ -2,11 +2,11 @@ package main
 
 import (
 	"encoding/json"
+	"github.com/cah-tylerrasor/pact-verification-resource/pkg/broker"
+	"github.com/cah-tylerrasor/pact-verification-resource/pkg/concourse"
 	"os"
 	"sort"
-
-	"github.com/nenad/pact-resource/pkg/broker"
-	"github.com/nenad/pact-resource/pkg/concourse"
+	"strings"
 )
 
 func main() {
@@ -19,38 +19,30 @@ func main() {
 		broker.WithBasicAuth(*request.Source.Username, *request.Source.Password)(client)
 	}
 
-	var consumerUpdates []concourse.Version
-	for _, c := range request.Source.Consumers {
-		var versions []broker.PactVersion
-		var err error
+	var providerVerifications []concourse.Version
+	for _, p := range request.Source.Providers {
+		var validation broker.HalPactVerification
 		if request.Source.Tag == nil || *request.Source.Tag == "" {
-			versions, err = client.GetVersions(request.Source.Provider, c)
+			validation = client.GetValidation(request.Source.Consumer, p)
 		} else {
-			versions, err = client.GetTaggedVersions(request.Source.Provider, c, *request.Source.Tag)
+			validation = client.GetTaggedValidation(request.Source.Consumer, p, *request.Source.Tag)
 		}
-		if err != nil {
-			concourse.FailTask("could not get pacts: %s", err)
-		}
-		for _, p := range versions {
-			// TODO Add verification check as a filter
-			pact, err := client.GetDetails(p.Provider, p.Consumer, p.ConsumerVersion)
-			if err != nil {
-				concourse.FailTask("could not get details: %s", err)
-			}
 
-			consumerUpdates = append(consumerUpdates, concourse.Version{
-				Consumer:  c,
-				UpdatedAt: pact.UpdatedAt,
-				Version:   pact.PactVersion.ConsumerVersion,
-			})
-		}
+		parsedVersion := strings.SplitAfter(validation.Links.Verification.Href, "pact-version/")[1]
+		parsedVersion = strings.Split(parsedVersion, "/verification-results")[0]
+		providerVerifications = append(providerVerifications, concourse.Version{
+			Provider: p,
+			ProviderVersion: validation.ProviderApplicationVersion,
+			UpdatedAt: validation.VerificationDate,
+			PactVersion: parsedVersion,
+		})
 	}
 
-	sort.SliceStable(consumerUpdates, func(i, j int) bool {
-		return consumerUpdates[i].UpdatedAt.Before(consumerUpdates[j].UpdatedAt)
+	sort.SliceStable(providerVerifications, func(i, j int) bool {
+		return providerVerifications[i].UpdatedAt.Before(providerVerifications[j].UpdatedAt)
 	})
 
-	if err := json.NewEncoder(os.Stdout).Encode(consumerUpdates); err != nil {
+	if err := json.NewEncoder(os.Stdout).Encode(providerVerifications); err != nil {
 		concourse.FailTask("error while encoding response: %s", err)
 	}
 }

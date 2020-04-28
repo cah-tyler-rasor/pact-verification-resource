@@ -1,0 +1,22 @@
+{
+  "providerName": "PROVIDER",
+  "providerApplicationVersion": "PROVIDER_VERSION",
+  "success": true,
+  "verificationDate": "2020-04-22T19:56:35Z",
+  "_links": {
+    "self": {
+      "title": "Verification result",
+      "name": "Verification result RESULT_NUMBER for Pact between CONSUMER (CONSUMER_VERSION) and PROVIDER",
+      "href": "BROKER_URL/pacts/provider/PROVIDER/consumer/CONSUMER/pact-version/PACT_VERSION/verification-results/RESULT_NUMBER"
+    },
+    "pb:pact-version": {
+      "title": "Pact",
+      "name": "Pact between CONSUMER (CONSUMER_VERSION) and PROVIDER",
+      "href": "BROKER_URL/pacts/provider/PROVIDER/consumer/CONSUMER/version/CONSUMER_VERSION"
+    },
+    "pb:triggered-webhooks": {
+      "title": "Webhooks triggered by the publication of this verification result",
+      "href": "BROKER_URL/pacts/provider/PROVIDER/consumer/CONSUMER/pact-version/PACT_VERSION/verification-results/RESULT_NUMBER/triggered-webhooks"
+    }
+  }
+}

@@ -1,4 +1,4 @@
-module github.com/nenad/pact-resource
+module github.com/cah-tylerrasor/pact-verification-resource
 
 go 1.13
 
